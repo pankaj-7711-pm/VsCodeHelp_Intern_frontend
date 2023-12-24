@@ -3,11 +3,12 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Time } from "./Time";
+import axios from "axios";
 
 const Calendar = () => {
   const [calendar, setCalendar] = useState([]);
-  const [date, setdate] = useState("");
-  const [month, setMonth] = useState("");
+  const [dateofapp, setdate] = useState("");
+  const [monthofapp, setMonth] = useState("");
   const [timings, setTimings] = useState(Time);
   const [borId, setBorId] = useState(-1);
   const [bgId, setBgId] = useState(-1);
@@ -40,29 +41,54 @@ const Calendar = () => {
     const today = new Date();
     displayDatesAndDays(today, 30);
   }, []);
-  
+
   const settings = {
     infinite: false,
     speed: 1000,
     slidesToShow: 3, // Display three items per slide
     slidesToScroll: 3, // Scroll three items at a time
-    
   };
 
   const handleTimings = async () => {
     try {
-      
+      console.log(dateofapp);
+      console.log(monthofapp);
+      var temp = Time;
+      for (var i = 0; i <= 7; i++) {
+        var timeofapp = temp[i].name;
+        const { data } = await axios.post(
+          "http://localhost:8000/api/v1/doc/verify",
+          {
+            dateofapp,
+            timeofapp,
+            monthofapp,
+          }
+        );
+        console.log(data);
+        if (data?.success) {
+          temp[i].isBooked = true;
+        }
+      }
+      setTimings(temp);
+      console.log(timings);
+
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  const handleDateMonth = (d,m,i) => {
+  useEffect(() => {
+    if (dateofapp && monthofapp) handleTimings();
+  }, [dateofapp, monthofapp,timings,borId]);
+
+  const handleDateMonth = async (d, m, i) => {
     setdate(d);
     setMonth(m);
     setBorId(i);
-    handleTimings();
-  }
+    setBgId(-1);
+    setTimings(Time);
+    // handleTimings();
+  };
 
   const handletemp = (i) => {
     setActiveBtn(true);
@@ -77,13 +103,20 @@ const Calendar = () => {
             <div
               className="text-center"
               style={{ backgroundColor: "white" }}
-              onClick={() => handleDateMonth(day.date, day.month,index)}
+              onClick={() => handleDateMonth(day.date, day.month, index)}
             >
               <p style={{ margin: "0", padding: "0" }}>
                 {day.day}, {day.date} {day.month.substring(0, 3)}
               </p>
               {index === borId ? (
-                <p style={{ margin: "0", padding: "0", color: "green", borderBottom:"2px solid green"}}>
+                <p
+                  style={{
+                    margin: "0",
+                    padding: "0",
+                    color: "green",
+                    borderBottom: "2px solid green",
+                  }}
+                >
                   8 slots available
                 </p>
               ) : (
@@ -99,6 +132,7 @@ const Calendar = () => {
       <div className="row" style={{ padding: "2rem" }}>
         {timings.map((time, index) => (
           <div className="col-lg-4 text-center timings-div">
+            
             {time.isBooked ? (
               <div
                 className="timings-sub-div disabled"
