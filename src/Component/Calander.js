@@ -4,6 +4,9 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Time } from "./Time";
 import axios from "axios";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { useDetails } from "../Context/details";
 
 const Calendar = () => {
   const [calendar, setCalendar] = useState([]);
@@ -13,6 +16,9 @@ const Calendar = () => {
   const [borId, setBorId] = useState(-1);
   const [bgId, setBgId] = useState(-1);
   const [activeBtn, setActiveBtn] = useState(false);
+  const [selectedTime, setSelectedTime] = useState("");
+  const navigate = useNavigate();
+  const [det, setDet] = useDetails();
 
   useEffect(() => {
     // Function to display dates and days for a time period of 30 days starting from today
@@ -68,10 +74,12 @@ const Calendar = () => {
         if (data?.success) {
           temp[i].isBooked = true;
         }
+        else {
+          temp[i].isBooked = false;
+        }
       }
       setTimings(temp);
       console.log(timings);
-
     } catch (error) {
       console.log(error);
     }
@@ -79,7 +87,7 @@ const Calendar = () => {
 
   useEffect(() => {
     if (dateofapp && monthofapp) handleTimings();
-  }, [dateofapp, monthofapp,timings,borId]);
+  }, [dateofapp, monthofapp, timings, borId]);
 
   const handleDateMonth = async (d, m, i) => {
     setdate(d);
@@ -87,13 +95,44 @@ const Calendar = () => {
     setBorId(i);
     setBgId(-1);
     setTimings(Time);
+    setActiveBtn(false);
     // handleTimings();
   };
 
-  const handletemp = (i) => {
+  const handletemp = (i,nm) => {
     setActiveBtn(true);
     setBgId(i);
+    setSelectedTime(nm);
   };
+
+  const handleBooking=async()=>{
+    try {
+      var timeofapp = selectedTime;
+      const { data } = await axios.post(
+          "http://localhost:8000/api/v1/doc/verify",
+          {
+            dateofapp,
+            timeofapp,
+            monthofapp,
+          }
+      );
+      if (data?.success) {
+        setActiveBtn(false);
+        setBgId(-1);
+        toast.error("Appointment already booked");
+      } else {
+        setDet({
+          ...det,
+          dateofapp: dateofapp,
+          selectedTime: selectedTime,
+          monthofapp:monthofapp
+        })
+        navigate("/bookingpage");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   return (
     <>
@@ -130,9 +169,8 @@ const Calendar = () => {
       </div>
       <hr style={{ marginTop: "0" }} />
       <div className="row" style={{ padding: "2rem" }}>
-        {timings.map((time, index) => (
+        {timings?.map((time, index) => (
           <div className="col-lg-4 text-center timings-div">
-            
             {time.isBooked ? (
               <div
                 className="timings-sub-div disabled"
@@ -152,7 +190,7 @@ const Calendar = () => {
                 ) : (
                   <div
                     className="timings-sub-div"
-                    onClick={() => handletemp(index)}
+                    onClick={() => handletemp(index,time.name)}
                   >
                     {time.name}
                   </div>
@@ -164,7 +202,7 @@ const Calendar = () => {
       </div>
       <div className="final-button">
         {activeBtn ? (
-          <button className="btn btn-primary">CONTINUE</button>
+          <button className="btn btn-primary" onClick={()=>handleBooking()}>CONTINUE</button>
         ) : (
           <button className="btn btn-primary disabled">CONTINUE</button>
         )}
